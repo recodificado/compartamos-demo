@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard Compartamos{% endblock %}
+{% block contenido %}
+<style>
+  /* Tarjetas completas en modo oscuro uniforme con borde suave */
+  .card-dark-custom {
+    background-color: #1e2630 !important;
+    border: 1px solid #2d3748 !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+  }
+  .card-dark-custom .card-header {
+    background-color: #18202a !important;
+    border-bottom: 1px solid #2d3748 !important;
+    color: #ffffff !important;
+  }
+  .card-dark-custom .card-body {
+    background-color: #1e2630 !important;
+  }
+  .desc-box-dark {
+    background-color: #141b24 !important;
+    color: #cbd5e1 !important;
+    border-top: 1px solid #2d3748;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .desc-box-dark strong {
+    color: #38bdf8 !important;
+    font-weight: 700;
+  }
+  /* Estilo oscuro para la tabla */
+  .table-dark-custom {
+    color: #e2e8f0 !important;
+    background-color: #1e2630 !important;
+    margin-bottom: 0;
+  }
+  .table-dark-custom th {
+    background-color: #0f172a !important;
+    color: #94a3b8 !important;
+    border-bottom: 1px solid #334155 !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+  }
+  .table-dark-custom td {
+    border-color: #2d3748 !important;
+    background-color: transparent !important;
+    color: #e2e8f0 !important;
+  }
+  .table-dark-custom tr:hover td {
+    background-color: #283342 !important;
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0 fw-bold text-primary"><i class="bi bi-bank2"></i> Compartamos Financiera</h3>
+    <small class="text-secondary fw-semibold">Panel Integral de Análisis y Gestión Crediticia</small>
+  </div>
+</div>
+
+<!-- Tarjetas KPI Principales -->
+<div class="row">
+  <div class="col-md-6 col-xl-3">
+    <div class="card text-bg-primary mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h2 class="mb-0 fw-bold">{{ "{:,}".format(est.totales.creditos) }}</h2>
+            <p class="mb-0">Créditos Otorgados</p>
+          </div>
+          <i class="bi bi-file-earmark-check fs-1 opacity-50"></i>
+        </div>
+      </div>
+      <a href="/creditos" class="card-footer text-white text-decoration-none">Ver cartera <i class="bi bi-arrow-right-circle"></i></a>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card text-bg-success mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h2 class="mb-0 fw-bold">S/. {{ "{:,.0f}".format(est.totales.total_desembolso) }}</h2>
+            <p class="mb-0">Desembolso Total</p>
+          </div>
+          <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+        </div>
+      </div>
+      <div class="card-footer text-white">Monto acumulado cartera</div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card text-bg-warning mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h2 class="mb-0 fw-bold">S/. {{ "{:,.2f}".format(est.totales.prom_desembolso) }}</h2>
+            <p class="mb-0">Promedio Desembolso</p>
+          </div>
+          <i class="bi bi-calculator fs-1 opacity-50"></i>
+        </div>
+      </div>
+      <div class="card-footer text-white">Por crédito desembolsado</div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card text-bg-info mb-3 shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h2 class="mb-0 fw-bold">{{ "{:,}".format(est.totales.grupos) }}</h2>
+            <p class="mb-0">Grupos de Crédito</p>
+          </div>
+          <i class="bi bi-people-fill fs-1 opacity-50"></i>
+        </div>
+      </div>
+      <div class="card-footer text-white">Banca Grupal activa</div>
+    </div>
+  </div>
+</div>
+
+<!-- Fila 1 de Gráficos: Evolución Mensual + Desembolso por Agencia -->
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-graph-up text-primary me-2"></i>Evolución de los Desembolsos y Punto Óptimo</h5>
+        <span class="badge text-bg-danger"><i class="bi bi-star-fill me-1"></i>Pico: S/. {{ "{:,.2f}".format(est.desembolso_mes.valor_optimo / 1000000) }}M ({{ est.desembolso_mes.mes_optimo }})</span>
+      </div>
+      <div class="card-body">
+        <canvas id="gEvolucionMes" height="130"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-calendar3 me-1 text-primary"></i> <strong>Qué muestra:</strong> La curva cronológica del capital colocado identificando con un punto rojo el <strong>Punto Óptimo Histórico</strong> (julio 2026 con S/. 26.48M colocados).
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-building text-success me-2"></i>Desembolso Total por Agencia</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gDesembolsoOficina" height="175"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-cash-coin me-1 text-success"></i> <strong>Qué muestra:</strong> La cantidad total de dinero colocado en cada sucursal de mayor a menor, demostrando que agencias como Huachipa y El Agustino lideran el volumen de capital prestado.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fila 2 de Gráficos: Top Asesores + Categoría Asesor -->
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-trophy text-warning me-2"></i>Top 5 Asesores con Mayor Colocación</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gTopAsesores" height="130"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-award me-1 text-warning"></i> <strong>Qué muestra:</strong> El ranking de los 5 asesores de crédito con mejor rendimiento en colocación de dinero, quienes alcanzan de manera individual cifras cercanas a los S/. 2 millones.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-person-badge text-info me-2"></i>Distribución por Categoría de Asesor</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gCategoriasAsesor" height="175"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-pie-chart me-1 text-info"></i> <strong>Qué muestra:</strong> La composición del equipo comercial según su nivel de experiencia, donde los asesores Junior concentran más de la mitad de todos los créditos colocados en la cartera.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fila 3 de Gráficos: Top Distritos + Grupos + Atrasos -->
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-geo-alt text-danger me-2"></i>Top Distritos (Promedio S/.)</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gDistritos" height="200"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-geo-alt me-1 text-info"></i> <strong>Qué muestra:</strong> Las zonas geográficas donde los clientes solicitan los préstamos promedio más altos, encabezadas por distritos como Puente Piedra y Comas.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-pie-chart text-info me-2"></i>Grupos por Agencia</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gGruposOficina" height="200"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-people me-1 text-info"></i> <strong>Qué muestra:</strong> La cantidad de grupos solidarios únicos que gestiona cada agencia, midiendo el tamaño real de la cartera de clientes comunitarios por oficina.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Cuotas Atrasadas por Agencia</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gAtrasos" height="200"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-shield-exclamation me-1 text-danger"></i> <strong>Qué muestra:</strong> El número de cuotas vencidas acumuladas en cada sucursal para priorizar gestiones de cobranza preventiva.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fila 4 de Gráficos: NUEVOS (Mora Real en Soles + Ganancia Proyectada) -->
+<div class="row">
+  <div class="col-lg-4">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-currency-dollar text-danger me-2"></i>Dinero Real Atrasado por Agencia</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gMoraReal" height="180"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-exclamation-octagon me-1 text-danger"></i> <strong>Qué muestra:</strong> La deuda en mora real multiplicando cuotas atrasadas por el valor de cada cuota (S/. K), midiendo el impacto económico exacto por oficina.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-cash-stack text-success me-2"></i>Ganancia Proyectada por Agencia</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gGananciaOficina" height="180"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-graph-up-arrow me-1 text-success"></i> <strong>Qué muestra:</strong> La utilidad proyectada calculada como ((Cuota × Cuotas Aprobadas) - Capital Prestado), reflejando la rentabilidad por sede.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card card-dark-custom mb-3 shadow-sm">
+      <div class="card-header">
+        <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-percent text-warning me-2"></i>Índice de Mora (%) por Agencia</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="gIndiceMora" height="180"></canvas>
+      </div>
+      <div class="desc-box-dark">
+        <i class="bi bi-shield-shaded me-1 text-warning"></i> <strong>Qué muestra:</strong> El ratio porcentual de morosidad ((Dinero Atrasado / Saldo Capital) × 100), revelando la calidad real de la cartera por sucursal.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla de Créditos Recientes / Muestra -->
+<div class="card card-dark-custom shadow-sm mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0 fw-bold text-white"><i class="bi bi-table text-secondary me-2"></i>Cartera de Créditos (Muestra de Datos)</h5>
+    <a href="/creditos" class="btn btn-sm btn-primary"><i class="bi bi-eye"></i> Ver todos los créditos</a>
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-dark-custom align-middle">
+      <thead>
+        <tr>
+          <th>Cód. Cuenta</th>
+          <th>Cliente / Grupo</th>
+          <th>Oficina</th>
+          <th>Distrito</th>
+          <th>Desembolso</th>
+          <th>Cuota</th>
+          <th>Cuotas Atrasadas</th>
+          <th>Asesor</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in ultimas %}
+        <tr>
+          <td><span class="badge bg-secondary">{{ v.codigo_cuenta }}</span></td>
+          <td><strong class="text-white">{{ v.nombre_unidad }}</strong></td>
+          <td><span class="badge text-bg-dark border border-secondary">{{ v.oficina }}</span></td>
+          <td>{{ v.distrito }}</td>
+          <td><strong class="text-success">S/. {{ "{:,.2f}".format(v.desembolso) if v.desembolso else '0.00' }}</strong></td>
+          <td>S/. {{ "{:,.2f}".format(v.mto_cuota) if v.mto_cuota else '0.00' }}</td>
+          <td>
+            {% if v.nro_cuotas_atrasadas and v.nro_cuotas_atrasadas > 0 %}
+              <span class="badge text-bg-danger">{{ v.nro_cuotas_atrasadas|int }} atrasada(s)</span>
+            {% else %}
+              <span class="badge text-bg-success">Al día</span>
+            {% endif %}
+          </td>
+          <td><small class="text-light">{{ v.asesor }}</small></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-3">Sin créditos registrados</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const distritos = {{ est.distritos|tojson }};
+  const desembolsoOficina = {{ est.desembolso_oficina|tojson }};
+  const gruposOficina = {{ est.grupos_oficina|tojson }};
+  const atrasosOficina = {{ est.atrasos_oficina|tojson }};
+  const desembolsoMes = {{ est.desembolso_mes|tojson }};
+  const topAsesores = {{ est.top_asesores|tojson }};
+  const categoriasAsesor = {{ est.categorias_asesor|tojson }};
+  const moraRealOficina = {{ est.mora_real_oficina|tojson }};
+  const gananciaOficina = {{ est.ganancia_oficina|tojson }};
+  const indiceMora = {{ est.indice_mora|tojson }};
+
+  // Colores para gráficos en tema oscuro
+  const textColor = '#cbd5e1';  // Gris claro/blanco para textos y ejes
+  const gridColor = '#334155';  // Líneas suaves oscuras
+
+  // 1. Evolución de los Desembolsos por Mes y Punto Óptimo
+  const maxIdx = desembolsoMes.valores.indexOf(Math.max(...desembolsoMes.valores));
+  const pointColors = desembolsoMes.valores.map((v, i) => i === maxIdx ? '#ef4444' : '#38bdf8');
+  const pointRadii = desembolsoMes.valores.map((v, i) => i === maxIdx ? 8 : 4.5);
+
+  new Chart(document.getElementById('gEvolucionMes'), {
+    type: 'line',
+    data: {
+      labels: desembolsoMes.labels,
+      datasets: [{
+        label: 'Desembolso Mensual (S/.)',
+        data: desembolsoMes.valores,
+        borderColor: '#38bdf8',
+        backgroundColor: 'rgba(56, 189, 248, 0.18)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.3,
+        pointRadius: pointRadii,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 1.5
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const val = (ctx.raw / 1000000).toFixed(2) + 'M';
+              return ctx.dataIndex === maxIdx ? '★ Punto Óptimo: S/. ' + val : 'Desembolso: S/. ' + val;
+            }
+          }
+        }
+      },
+      scales: {
+        y: { 
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => 'S/. ' + (v/1000000).toFixed(1) + 'M' } 
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: textColor } 
+        }
+      }
+    }
+  });
+
+  // 2. Desembolso Total por Agencia (Barras Horizontales)
+  new Chart(document.getElementById('gDesembolsoOficina'), {
+    type: 'bar',
+    data: {
+      labels: desembolsoOficina.labels,
+      datasets: [{
+        label: 'Total Desembolsado (S/.)',
+        data: desembolsoOficina.valores,
+        backgroundColor: '#10b981'
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { 
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => 'S/. ' + (v/1000000).toFixed(1) + 'M' } 
+        },
+        y: { 
+          grid: { display: false },
+          ticks: { color: '#f1f5f9', font: { weight: '600' } } 
+        }
+      }
+    }
+  });
+
+  // 3. Top 5 Asesores (Barras Horizontales)
+  new Chart(document.getElementById('gTopAsesores'), {
+    type: 'bar',
+    data: {
+      labels: topAsesores.labels.map(l => l.length > 25 ? l.substring(0, 25) + '...' : l),
+      datasets: [{
+        label: 'Monto Colocado (S/.)',
+        data: topAsesores.valores,
+        backgroundColor: '#f59e0b',
+        borderColor: '#d97706',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { 
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => 'S/. ' + (v/1000000).toFixed(2) + 'M' } 
+        },
+        y: { 
+          grid: { display: false },
+          ticks: { color: '#f1f5f9', font: { weight: '600' } } 
+        }
+      }
+    }
+  });
+
+  // 4. Categorías de Asesor (Pie)
+  new Chart(document.getElementById('gCategoriasAsesor'), {
+    type: 'pie',
+    data: {
+      labels: categoriasAsesor.labels,
+      datasets: [{
+        data: categoriasAsesor.valores,
+        backgroundColor: ['#8b5cf6', '#06b6d4', '#10b981', '#f97316'],
+        borderColor: '#1e2630',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { 
+        legend: { 
+          position: 'bottom',
+          labels: { color: textColor, font: { weight: '500' } }
+        } 
+      }
+    }
+  });
+
+  // 5. Top Distritos por Promedio
+  new Chart(document.getElementById('gDistritos'), {
+    type: 'bar',
+    data: {
+      labels: distritos.labels,
+      datasets: [{
+        label: 'Promedio Desembolso (S/.)',
+        data: distritos.valores,
+        backgroundColor: '#06b6d4'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { 
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => 'S/. ' + v.toLocaleString() } 
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: textColor, maxRotation: 45, minRotation: 30 } 
+        }
+      }
+    }
+  });
+
+  // 6. Grupos por Agencia (Doughnut)
+  new Chart(document.getElementById('gGruposOficina'), {
+    type: 'doughnut',
+    data: {
+      labels: gruposOficina.labels,
+      datasets: [{
+        data: gruposOficina.valores,
+        backgroundColor: ['#10b981', '#38bdf8', '#f59e0b', '#f97316', '#8b5cf6', '#64748b'],
+        borderColor: '#1e2630',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { 
+        legend: { 
+          position: 'bottom',
+          labels: { color: textColor, font: { weight: '500' } }
+        } 
+      }
+    }
+  });
+
+  // 7. Cuotas Atrasadas por Agencia (Barras Rojas)
+  new Chart(document.getElementById('gAtrasos'), {
+    type: 'bar',
+    data: {
+      labels: atrasosOficina.labels,
+      datasets: [{
+        label: 'Cuotas Atrasadas',
+        data: atrasosOficina.valores,
+        backgroundColor: '#ef4444'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { 
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: { color: textColor } 
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: textColor, maxRotation: 45, minRotation: 30 } 
+        }
+      }
+    }
+  });
+
+  // 8. NUEVO: Dinero Real Atrasado por Agencia (Mora Real en Soles)
+  new Chart(document.getElementById('gMoraReal'), {
+    type: 'bar',
+    data: {
+      labels: moraRealOficina.labels,
+      datasets: [{
+        label: 'Deuda Atrasada (S/.)',
+        data: moraRealOficina.valores,
+        backgroundColor: '#dc2626'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { 
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => 'S/. ' + (v/1000).toFixed(0) + 'K' } 
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: textColor, maxRotation: 45, minRotation: 25 } 
+        }
+      }
+    }
+  });
+
+  // 9. NUEVO: Ganancia Proyectada Esperada por Agencia
+  new Chart(document.getElementById('gGananciaOficina'), {
+    type: 'bar',
+    data: {
+      labels: gananciaOficina.labels,
+      datasets: [{
+        label: 'Ganancia Proyectada (S/.)',
+        data: gananciaOficina.valores,
+        backgroundColor: '#16a34a'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { 
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => 'S/. ' + (v/1000000).toFixed(1) + 'M' } 
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: textColor, maxRotation: 45, minRotation: 25 } 
+        }
+      }
+    }
+  });
+
+  // 10. NUEVO: Índice de Mora (%) por Oficina
+  new Chart(document.getElementById('gIndiceMora'), {
+    type: 'bar',
+    data: {
+      labels: indiceMora.labels,
+      datasets: [{
+        label: 'Índice de Mora (%)',
+        data: indiceMora.valores,
+        backgroundColor: '#ea580c'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { 
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: { color: textColor, callback: v => v.toFixed(1) + '%' } 
+        },
+        x: { 
+          grid: { display: false },
+          ticks: { color: textColor, maxRotation: 45, minRotation: 25 } 
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}
